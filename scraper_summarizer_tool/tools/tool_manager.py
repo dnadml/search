@@ -78,18 +78,15 @@ class ToolManager:
         self.twitter_data = None
 
     async def run(self):
-        response_data = []
+        response_data = {}
         actions = await self.detect_tools_to_use()
         tasks = [asyncio.create_task(self.run_tool(action)) for action in actions]
         toolkit_results = {}
 
         for completed_task in asyncio.as_completed(tasks):
             result, toolkit_name, tool_name = await completed_task
-            response_data.append({
-                "toolkit_name": toolkit_name,
-                "tool_name": tool_name,
-                "result": result,
-            })
+            response_data[tool_name] = result
+
             if result is not None:
                 if toolkit_name == TwitterToolkit().name:
                     toolkit_results[toolkit_name] = result
@@ -143,7 +140,7 @@ class ToolManager:
                     "more_body": False,
                 }
             )
-        response_data.append(self.response_streamer.get_texts_by_role())
+        response_data['summaries'] = (self.response_streamer.get_texts_by_role())
         return response_data
 
     async def detect_tools_to_use(self):
@@ -294,7 +291,8 @@ async def set_tool_manager(prompt, tools):
         manual_tool_names=tools,
         send=response_streamer.send,
     )
-    return await tool_manager.run()
+    result = await tool_manager.run()
+    return tool_manager, result
 
 
 def run_tool_manager(prompt, tools):
@@ -302,7 +300,8 @@ def run_tool_manager(prompt, tools):
 
 
 if __name__ == "__main__":
-    print(run_tool_manager(
+    tool_manager, result = run_tool_manager(
         "Donald Trump",
         ["Youtube Search"]
-    ))
+    )
+    print(result)

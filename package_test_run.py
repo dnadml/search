@@ -6,7 +6,7 @@ if __name__ == "__main__":
     # 'Youtube Search': YoutubeSearchTool()
     # 'Recent Tweets': GetRecentTweetsTool()
     # 'Full Archive Tweets': GetFullArchiveTweetsTool()
-    result = run_tool_manager("Architecture Styles in Software Development",
-                              ["Web Search", "Youtube Search"]
+    tool_manager, result = run_tool_manager("Architecture Styles in Software Development",
+                              ["Youtube Search", "Web Search"]
                               )
-    pprint(result)
+    print(result)

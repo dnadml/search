@@ -99,12 +99,6 @@ class ScraperStreamingSynapse(BaseModel):
         allow_mutation=False,
     )
 
-    seed: int = pydantic.Field(
-        "",
-        title="Seed",
-        description="Seed for text generation. This attribute is immutable and cannot be updated.",
-    )
-
     model: Optional[str] = pydantic.Field(
         "",
         title="model",
@@ -123,26 +117,15 @@ class ScraperStreamingSynapse(BaseModel):
         description="Analysis of the Twitter query result.",
     )
 
-    validator_tweets: Optional[List[TwitterScraperTweet]] = pydantic.Field(
-        default_factory=list,
-        title="tweets",
-        description="Fetched Tweets Data.",
-    )
-
-    validator_links: Optional[List[Dict]] = pydantic.Field(
-        default_factory=list, title="Links", description="Fetched Links Data."
-    )
-
-    miner_tweets: Optional[Dict[str, Any]] = pydantic.Field(
-        default_factory=dict,
-        title="Miner Tweets",
-        description="Optional JSON object containing tweets data from the miner.",
-    )
-
     search_completion_links: Optional[List[str]] = pydantic.Field(
         default_factory=list,
         title="Links Content",
         description="A list of links extracted from search summary text.",
+    )
+
+    search_completion_links_metadata: Optional[Dict] = pydantic.Field(
+        default_factory=dict,
+        title="Links Metadata",
     )
 
     completion_links: Optional[List[str]] = pydantic.Field(
@@ -155,12 +138,6 @@ class ScraperStreamingSynapse(BaseModel):
         default_factory=dict,
         title="Search Results",
         description="Optional JSON object containing search results from SERP",
-    )
-
-    is_intro_text: bool = pydantic.Field(
-        False,
-        title="Is Intro Text",
-        description="Indicates whether the text is an introductory text.",
     )
 
     texts: Optional[Dict[str, str]] = pydantic.Field(
@@ -180,107 +157,6 @@ class ScraperStreamingSynapse(BaseModel):
 
     def get_search_summary_completion(self) -> Optional[str]:
         return self.texts.get(ScraperTextRole.SEARCH_SUMMARY.value, "")
-
-    async def process_streaming_response(self, response: StreamingResponse):
-        if self.completion is None:
-            self.completion = ""
-
-        buffer = ""  # Initialize an empty buffer to accumulate data across chunks
-
-        try:
-            async for chunk in response.content.iter_any():
-                # Decode the chunk from bytes to a string
-                chunk_str = chunk.decode("utf-8")
-                # Attempt to parse the chunk as JSON, updating the buffer with remaining incomplete JSON data
-                json_objects, buffer = extract_json_chunk(chunk_str, response, buffer)
-                for json_data in json_objects:
-                    content_type = json_data.get("type")
-
-                    if content_type == "text":
-                        text_content = json_data.get("content", "")
-                        role = json_data.get("role")
-
-                        yield json.dumps(
-                            {"type": "text", "role": role, "content": text_content}
-                        )
-                    elif content_type == "texts":
-                        texts = json_data.get("content", "")
-                        self.texts = texts
-                    elif content_type == "completion":
-                        completion = json_data.get("content", "")
-                        self.completion = completion
-
-                        yield json.dumps({"type": "completion", "content": completion})
-                    elif content_type == "prompt_analysis":
-                        prompt_analysis_json = json_data.get("content", "{}")
-                        prompt_analysis = TwitterPromptAnalysisResult()
-                        prompt_analysis.fill(prompt_analysis_json)
-                        self.set_prompt_analysis(prompt_analysis)
-
-                    elif content_type == "tweets":
-                        tweets_json = json_data.get("content", "[]")
-                        self.miner_tweets = tweets_json
-                        yield json.dumps({"type": "tweets", "content": tweets_json})
-
-                    elif content_type == "search":
-                        search_json = json_data.get("content", "{}")
-                        self.search_results = search_json
-                        yield json.dumps({"type": "search", "content": search_json})
-        except json.JSONDecodeError as e:
-            port = response.real_url.port
-            host = response.real_url.host
-            logging.debug(
-                f"process_streaming_response Host: {host}:{port} ERROR: json.JSONDecodeError: {e}, "
-            )
-        except TimeoutError as e:
-            port = response.real_url.port
-            host = response.real_url.host
-            print(f"TimeoutError occurred: Host: {host}:{port}, Error: {e}")
-        except Exception as e:
-            port = response.real_url.port
-            host = response.real_url.host
-            logging.debug(
-                f"process_streaming_response: Host: {host}:{port} ERROR: {e}"
-            )
-
-    def deserialize(self) -> str:
-        return self.completion
-
-    def extract_response_json(self, response: ClientResponse) -> dict:
-        headers = {
-            k.decode("utf-8"): v.decode("utf-8")
-            for k, v in response.__dict__["_raw_headers"]
-        }
-
-        def extract_info(prefix):
-            return {
-                key.split("_")[-1]: value
-                for key, value in headers.items()
-                if key.startswith(prefix)
-            }
-
-        completion_links = TwitterUtils().find_twitter_links(self.completion)
-
-        search_completion_links = WebSearchUtils().find_links(
-            self.get_search_summary_completion()
-        )
-
-        return {
-            "name": headers.get("name", ""),
-            "timeout": float(headers.get("timeout", 0)),
-            "total_size": int(headers.get("total_size", 0)),
-            "header_size": int(headers.get("header_size", 0)),
-            "dendrite": extract_info("bt_header_dendrite"),
-            "axon": extract_info("bt_header_axon"),
-            "messages": self.messages,
-            "completion": self.completion,
-            "miner_tweets": self.miner_tweets,
-            "search_results": self.search_results,
-            "prompt_analysis": self.prompt_analysis.dict(),
-            "completion_links": completion_links,
-            "search_completion_links": search_completion_links,
-            "texts": self.texts,
-        }
 
     class Config:
         arbitrary_types_allowed = True

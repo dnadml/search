@@ -83,8 +83,6 @@ class SummaryRelevanceGradingModel:
                     for (key, score_result), (scoring_prompt, _) in zip(score_responses.items(), filter_scoring_messages):
                         if score_result is not None:
                             score = scoring_prompt.extract_score(score_result)
-                            # Scale 0-10 score to 0-1 range.
-                            score /= 10.0
                             scores[key] = {}
                             scores[key]['value'] = score_result
                             scores[key]['score'] = score
