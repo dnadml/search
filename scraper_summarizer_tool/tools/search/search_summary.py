@@ -25,6 +25,7 @@ Operational Rules:
 5. Not return text like <UserPrompt> to your response, make response easy to understand to any user.
 6. Make headers bold using Markdown.
 7. Start text with bold text "Search Summary:".
+8. Pick upto 10 relevant links if available.
 """
 
 

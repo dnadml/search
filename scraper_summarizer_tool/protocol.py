@@ -134,6 +134,11 @@ class ScraperStreamingSynapse(BaseModel):
         description="A list of JSON objects representing the extracted links content from the tweets.",
     )
 
+    completion_links_metadata: Optional[Dict] = pydantic.Field(
+        default_factory=dict,
+        title="Twitter Links Metadata",
+    )
+
     search_results: Optional[Any] = pydantic.Field(
         default_factory=dict,
         title="Search Results",

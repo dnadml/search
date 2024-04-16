@@ -1,14 +1,13 @@
 import logging
 from typing import List
-from .config import RewardModelType
+from scraper_summarizer_tool.grading.config import RewardModelType
 from scraper_summarizer_tool.protocol import ScraperStreamingSynapse, ScraperTextRole
 import traceback
 import asyncio
 import random
 from scraper_summarizer_tool.grading.prompts import ScoringPrompt, SearchSummaryRelevancePrompt
 import time
-
-from .scores import get_score_by_openai
+from scraper_summarizer_tool.grading.scores import get_score_by_openai
 
 
 class WebSearchContentRelevanceModel:
@@ -26,14 +25,9 @@ class WebSearchContentRelevanceModel:
         start_time = time.time()
 
         for response in responses:
-            links = [
-                link
-                for link in random.sample(
-                    response.search_completion_links,
-                    min(3, len(response.search_completion_links)),
-                )
-            ]
-            for link in links:
+            links = []
+            for link in response.search_completion_links:
+                links.append(link)
                 links_with_metadata[link] = str(response.search_completion_links_metadata[link])
 
             all_links.extend(links)
@@ -45,8 +39,6 @@ class WebSearchContentRelevanceModel:
             return {}
 
         scoring_messages = []
-        # raise Exception(links_with_metadata)
-
         for url, link_with_metadata in links_with_metadata.items():
             result = self.get_scoring_text(
                 prompt=prompt, content=link_with_metadata
