@@ -125,9 +125,13 @@ class TwitterContentRelevanceModel:
                             score_result = val_score_responses.get(val_tweet, None)
                             if score_result is not None:
                                 score = scoring_prompt.extract_score(score_result)
+                                total_score += score
                                 response_scores[val_tweet] = {}
                                 response_scores[val_tweet]['value'] = score_result
                                 response_scores[val_tweet]['score'] = score
+                    if total_score > 0:
+                        response_scores['average_score'] = round(total_score / len(val_score_responses), 2)
+                        response_scores['count'] = len(val_score_responses)
                 grouped_val_score_responses.append(response_scores)
             return grouped_val_score_responses
         except Exception as e:

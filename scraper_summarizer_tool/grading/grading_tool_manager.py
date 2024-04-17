@@ -16,7 +16,7 @@ def grading_tool_manager(prompt, tools):
     )
 
     texts = result['summaries']
-    completions = str(texts)
+    completions = ', '.join(texts.values())
     search_completion_links = []
     search_completion_links_metadata = {}
     completion_links = []
@@ -24,14 +24,14 @@ def grading_tool_manager(prompt, tools):
     web_search_grading = False
     twitter_grading = False
 
-    if "Web Search" in tools:
+    if "Web Search" in result:
         sections = result["Web Search"]
         for section, links in sections.items():
             search_completion_links_metadata.update({link['link']: link for link in links})
             search_completion_links = list(search_completion_links_metadata.keys())
         web_search_grading = True
 
-    if "Recent Tweets" in tools or "Full Archive Tweets" in tools:
+    if "Recent Tweets" in result:
         links = (result["Recent Tweets"][0]['data'])
         completion_links_metadata = {
             link['entities']['urls'][0]['url']: link
