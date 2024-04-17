@@ -12,6 +12,8 @@ set_rate_limiting(True, min_wait=timedelta(milliseconds=50))
 
 
 class WikipediaAPIWrapper(LangchainWikipediaAPIWrapper):
+    top_k_results = 3
+
     def run(self, query: str) -> str:
         try:
             page_titles = self.wiki_client.search(

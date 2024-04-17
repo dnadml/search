@@ -29,12 +29,13 @@ class YoutubeSearchTool(BaseTool):
     args_schema: Type[YoutubeSearchSchema] = YoutubeSearchSchema
 
     tool_id = "8b7b6dad-e550-4a01-be51-aed785eda805"
+    max_results = 10
 
     def _run(
         self, query: str, run_manager: Optional[CallbackManagerForToolRun] = None
     ) -> str:
-        """Search Youtube and return the results."""
-        result = YoutubeSearch(search_terms=query, max_results=10)
+        """Search YouTube and return the results."""
+        result = YoutubeSearch(search_terms=query, max_results=self.max_results)
         return result.videos
 
     async def send_event(self, send, response_streamer, data):

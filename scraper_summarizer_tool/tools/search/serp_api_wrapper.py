@@ -1,9 +1,23 @@
+from typing import Dict
+
 from langchain_community.utilities.serpapi import (
     SerpAPIWrapper as LangChainSerpAPIWrapper,
 )
 
 
 class SerpAPIWrapper(LangChainSerpAPIWrapper):
+    num = 10
+
+    def get_params(self, query: str) -> Dict[str, str]:
+        """Get parameters for SerpAPI."""
+        _params = {
+            "api_key": self.serpapi_api_key,
+            "q": query,
+            "num": self.num
+        }
+        params = {**self.params, **_params}
+        return params
+
     @staticmethod
     def _process_response(res: dict):
         """Process response from SerpAPI."""
@@ -104,14 +118,11 @@ class SerpAPIWrapper(LangChainSerpAPIWrapper):
         # ):
         #     snippets.append(res["local_results"]["places"])
 
-
         # UNCOMMENT TO RETURN FIRST FOUND DICTIONARY
         # if len(snippets) > 0:
         #     return {"organic_results": "snippets"}
         # else:
         #     return "No good search result found"
-
-
 
         # COMMENT ALL BELOW TO RETURN FIRST FOUND DICTIONARY
         processed_data = {}

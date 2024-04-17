@@ -33,6 +33,9 @@ def grading_tool_manager(prompt, tools):
 
     if "Recent Tweets" in result:
         links = (result["Recent Tweets"][0]['data'])
+        # search_completion_links_metadata.update({
+        #     f"https://twitter.com/{link['author_id']}/status/{link['id']}": link for link in links
+        # })
         completion_links_metadata = {
             link['entities']['urls'][0]['url']: link
             for link in links
