@@ -1,3 +1,11 @@
+setuptools~=69.1.1
+openai~=1.16.1
+langchain~=0.1.14
+pydantic~=2.6.4
+wikipedia~=1.4.0
+starlette~=0.37.2
+aiohttp~=3.9.0b0
+python-dotenv~=1.0.1
 pydantic~=2.6.4
 starlette~=0.37.2
 torch==2.1.0
@@ -11,10 +19,5 @@ datasets==2.17.0
 sentencepiece==0.1.99
 google-search-results==2.4.2
 urllib3==1.26.9
-wikipedia==1.4.0
 youtube-search==2.1.2
 accelerate==0.27.2
-
-setuptools~=69.1.1
-langchain~=0.1.14
-python-dotenv~=1.0.1

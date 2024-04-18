@@ -23,6 +23,8 @@ def grading_tool_manager(prompt, tools):
     completion_links_metadata = {}
     web_search_grading = False
     twitter_grading = False
+    wikipedia_grading = False
+    youtube_grading = False
 
     if "Web Search" in result:
         sections = result["Web Search"]
@@ -33,14 +35,14 @@ def grading_tool_manager(prompt, tools):
 
     if "Recent Tweets" in result:
         links = (result["Recent Tweets"][0]['data'])
-        # search_completion_links_metadata.update({
-        #     f"https://twitter.com/{link['author_id']}/status/{link['id']}": link for link in links
-        # })
         completion_links_metadata = {
-            link['entities']['urls'][0]['url']: link
-            for link in links
-            if 'entities' in link and 'urls' in link['entities'] and 'url' in link['entities']['urls'][0]
+            f"https://twitter.com/{link['author_id']}/status/{link['id']}": link for link in links
         }
+        # completion_links_metadata = {
+        #     link['entities']['urls'][0]['url']: link
+        #     for link in links
+        #     if 'entities' in link and 'urls' in link['entities'] and 'url' in link['entities']['urls'][0]
+        # }
         completion_links = list(completion_links_metadata.keys())
         twitter_grading = True
 
@@ -60,7 +62,47 @@ def grading_tool_manager(prompt, tools):
     web_search_scores = (WebSearchContentRelevanceModel().get_scores(prompt, responses)) if web_search_grading else None
     twitter_scores = (TwitterContentRelevanceModel().get_scores(prompt, responses)) if twitter_grading else None
 
-    return summary_scores, web_search_scores, twitter_scores
+    if "Wikipedia Search" in result:
+        links = result["Wikipedia Search"]
+        search_completion_links_metadata = {
+            link['url']: link for link in links
+        }
+        search_completion_links = list(search_completion_links_metadata.keys())
+        wikipedia_grading = True
+
+    responses = [
+        ScraperStreamingSynapse(
+            completion=completions,
+            messages=prompt,
+            texts=texts,
+            search_completion_links=search_completion_links,
+            search_completion_links_metadata=search_completion_links_metadata,
+        ),
+    ]
+
+    wikipedia_scores = (WebSearchContentRelevanceModel().get_scores(prompt, responses)) if wikipedia_grading else None
+
+    if "Youtube Search" in result:
+        links = result["Youtube Search"]
+        search_completion_links_metadata = {
+            f"https://www.youtube.com/{link['url_suffix']}": link for link in links
+        }
+        search_completion_links = list(search_completion_links_metadata.keys())
+        youtube_grading = True
+
+    responses = [
+        ScraperStreamingSynapse(
+            completion=completions,
+            messages=prompt,
+            texts=texts,
+            search_completion_links=search_completion_links,
+            search_completion_links_metadata=search_completion_links_metadata,
+        ),
+    ]
+
+    youtube_grading = (WebSearchContentRelevanceModel().get_scores(prompt, responses)) if youtube_grading else None
+
+    return summary_scores, web_search_scores, twitter_scores, wikipedia_scores, youtube_grading
 
 
 def select_tools(tools):
@@ -92,7 +134,13 @@ def run_grading_tool_manager():
     ]
     selected_tools = select_tools(tools)
     print("Selected Tools:", selected_tools)
-    summary_scores, web_search_scores, twitter_scores = grading_tool_manager(prompt, selected_tools)
+    (
+        summary_scores,
+        web_search_scores,
+        twitter_scores,
+        wikipedia_scores,
+        youtube_scores
+    ) = grading_tool_manager(prompt, selected_tools)
 
     print(
         "\n-------------------------- Summary Scores Start --------------------------\n",
@@ -111,4 +159,18 @@ def run_grading_tool_manager():
             "\n-------------------------- Twitter Scores Start --------------------------\n",
             twitter_scores,
             "\n-------------------------- Twitter Scores End --------------------------\n"
+        )
+
+    if wikipedia_scores:
+        print(
+            "\n-------------------------- Wikipedia Scores Start --------------------------\n",
+            wikipedia_scores,
+            "\n-------------------------- Wikipedia Scores End --------------------------\n"
+        )
+
+    if youtube_scores:
+        print(
+            "\n-------------------------- YouTube Scores Start --------------------------\n",
+            youtube_scores,
+            "\n-------------------------- YouTube Scores End --------------------------\n"
         )
