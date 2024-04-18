@@ -296,11 +296,14 @@ async def set_tool_manager(prompt, tools):
 
 
 def run_tool_manager(prompt, tools):
-    return asyncio.run(set_tool_manager(prompt, tools))
+    tool_manager, result = asyncio.run(set_tool_manager(prompt, tools))
+    if "Recent Tweets" in result:
+        result['Recent Tweets'] = result['Recent Tweets'][0]
+    return json.dumps(result)
 
 
 if __name__ == "__main__":
-    tool_manager, result = run_tool_manager(
+    result = run_tool_manager(
         "Donald Trump",
         ["Youtube Search"]
     )

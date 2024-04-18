@@ -1,3 +1,5 @@
+import json
+
 from scraper_summarizer_tool.grading.config import RewardScoringType
 from scraper_summarizer_tool.grading.prompts import SummaryRelevancePrompt
 from scraper_summarizer_tool.grading.search_content_relevance import WebSearchContentRelevanceModel
@@ -8,7 +10,8 @@ from scraper_summarizer_tool.protocol import ScraperStreamingSynapse
 
 
 def grading_tool_manager(prompt, tools):
-    tool_manager, result = run_tool_manager(prompt, tools)
+    result = json.loads(run_tool_manager(prompt, tools))
+
     print(
         "\n-------------------------- Search Results Start --------------------------\n",
         result,
@@ -33,8 +36,8 @@ def grading_tool_manager(prompt, tools):
             search_completion_links = list(search_completion_links_metadata.keys())
         web_search_grading = True
 
-    if "Recent Tweets" in result:
-        links = (result["Recent Tweets"][0]['data'])
+    if "Recent Tweets" in result and 'data' in result["Recent Tweets"]:
+        links = (result["Recent Tweets"]['data'])
         completion_links_metadata = {
             f"https://twitter.com/{link['author_id']}/status/{link['id']}": link for link in links
         }
