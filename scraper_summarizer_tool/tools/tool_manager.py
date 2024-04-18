@@ -6,6 +6,7 @@ import json
 import logging
 from langchain_openai import ChatOpenAI
 from starlette.types import Send
+import better_profanity
 
 from scraper_summarizer_tool.tools.base import BaseTool
 from scraper_summarizer_tool.tools.get_tools import (
@@ -262,6 +263,29 @@ class ToolManager:
         )
 
 
+def filter_inappropriate_content(results, threshold=0.6):
+    # Initialize better_profanity
+    bp = better_profanity.Profanity()
+    if "Recent Tweets" in results.keys():
+        data = result['Recent Tweets'][0]['data']
+        filtered = []
+        for item in data:
+            if threshold > bp.get_profanity_likelihood(bp.contains_profanity(str(item))):
+                filtered.append(item)
+            else:
+                print("Profanity", str(item))
+        result['Recent Tweets'][0]['data'] = filtered
+
+    # if "Web Search" in results.keys():
+    #     data = result['Web Search']
+    #     filtered = []
+    #     for item in data:
+    #         if not bp.contains_profanity(str(item)):
+    #             filtered.append(item)
+    #     result['Recent Tweets'][0]['data'] = filtered
+
+
+
 async def set_tool_manager(prompt, tools):
     model: str = "gpt-3.5-turbo-0125"
     # 'Web Search': SerpGoogleSearchTool()
@@ -301,7 +325,7 @@ def run_tool_manager(prompt, tools):
 
 if __name__ == "__main__":
     tool_manager, result = run_tool_manager(
-        "Donald Trump",
-        ["Youtube Search"]
+        "Arse",
+        ["Recent Tweets"]
     )
-    print(result)
+    print(filter_inappropriate_content(result))
