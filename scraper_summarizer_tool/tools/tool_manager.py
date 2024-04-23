@@ -1,4 +1,7 @@
 from typing import List, Dict, Optional, Any
+import re
+
+import requests
 from openai import OpenAI
 import asyncio
 import os
@@ -6,7 +9,9 @@ import json
 import logging
 from langchain_openai import ChatOpenAI
 from starlette.types import Send
+import better_profanity
 
+from scraper_summarizer_tool.services.twitter_prompt_analyzer import TwitterPromptAnalyzer
 from scraper_summarizer_tool.tools.base import BaseTool
 from scraper_summarizer_tool.tools.get_tools import (
     get_all_tools,
@@ -80,12 +85,21 @@ class ToolManager:
     async def run(self):
         response_data = {}
         actions = await self.detect_tools_to_use()
+
+        # Always Get Recent Tweets
+        if not {"action": "Recent Tweets", "args": self.prompt} in actions:
+            actions.append({"action": "Recent Tweets", "args": self.prompt})
+
         tasks = [asyncio.create_task(self.run_tool(action)) for action in actions]
         toolkit_results = {}
 
         for completed_task in asyncio.as_completed(tasks):
             result, toolkit_name, tool_name = await completed_task
             response_data[tool_name] = result
+
+            if tool_name == "Recent Tweets" or tool_name == "Full Archive Tweets":
+                response_data['keywords'] = result[1].keywords
+                response_data[tool_name] = result[0]
 
             if result is not None:
                 if toolkit_name == TwitterToolkit().name:
@@ -97,6 +111,11 @@ class ToolManager:
                     toolkit_results[
                         toolkit_name
                     ] += f"{tool_name} results: {result}\n\n"
+
+        # Twitter Toolkit Not Selected
+        # if 'keywords' not in response_data:
+            # twitter_prompt_analyzer = await TwitterPromptAnalyzer().generate_query_params_from_prompt(self.prompt)
+            # response_data['keywords'] = twitter_prompt_analyzer['keywords']
 
         streaming_tasks = []
 
@@ -262,8 +281,63 @@ class ToolManager:
         )
 
 
+def remove_links(text):
+    url_pattern = re.compile(r"https?://\S+")
+    return url_pattern.sub("", text)
+
+
+def profanity_percentage(text):
+    bp = better_profanity.Profanity()
+    words = text.split()
+    total_words = 0
+    profane_words = 0
+
+    for word in words:
+        clean_word = ''.join(filter(str.isalnum, word))
+        if clean_word:
+            total_words += 1
+            if bp.contains_profanity(clean_word.lower()):
+                profane_words += 1
+    profanity_percentage = (profane_words / total_words) * 100 if total_words > 0 else 0.0
+    return profanity_percentage
+
+
+def filter_inappropriate_content(results, percentage=50):
+    if "Recent Tweets" in results and 'data' in results['Recent Tweets']:
+        results['Recent Tweets']['data'] = [
+            item for item in results['Recent Tweets']['data']
+            if percentage > profanity_percentage(str(item['text']))
+        ]
+
+    # if "Full Archived Tweets" in results:
+    #     results['Full Archived Tweets']['data'] = [
+    #         item for item in results['Full Archived Tweets']['data']
+    #         if percentage > profanity_percentage(str(item['text']))
+    #     ]
+
+    if "Web Search" in results:
+        for section, data in results['Web Search'].items():
+            results['Web Search'][section] = [
+                item for item in data
+                if percentage > profanity_percentage(" ".join(remove_links(str(value)) for value in item.values()))
+            ]
+
+    if "Wikipedia Search" in results:
+        results['Wikipedia Search'] = [
+            item for item in results['Wikipedia Search']
+            if percentage > profanity_percentage(" ".join(remove_links(str(value)) for value in item.values()))
+        ]
+
+    if "Youtube Search" in results:
+        results['Youtube Search'] = [
+            item for item in results['Youtube Search']
+            if percentage > profanity_percentage(str(f"{item['title']} {item['long_desc']} {item['channel']}"))
+        ]
+
+    return results
+
+
 async def set_tool_manager(prompt, tools):
-    model: str = "gpt-3.5-turbo-0125"
     # 'Web Search': SerpGoogleSearchTool()
     # 'Wikipedia Search': WikipediaSearchTool()
     # 'Youtube Search': YoutubeSearchTool()
@@ -295,16 +369,26 @@ async def set_tool_manager(prompt, tools):
     return tool_manager, result
 
 
-def run_tool_manager(prompt, tools):
+def run_tool_manager(prompt, tools, filter_profanity=True):
     tool_manager, result = asyncio.run(set_tool_manager(prompt, tools))
-    if "Recent Tweets" in result:
-        result['Recent Tweets'] = result['Recent Tweets'][0]
+    if filter_profanity:
+        result = filter_inappropriate_content(result)
     return json.dumps(result)
 
 
 if __name__ == "__main__":
-    result = run_tool_manager(
-        "Donald Trump",
-        ["Youtube Search"]
+    result = json.loads(run_tool_manager(
+        "Brooklyn Nine Nine",
+        ["Web Search"],
+        False
+    ))
+    print(
+        "\n-------------------------- Search Results Start --------------------------\n",
+        (result),
+        "\n-------------------------- Search Results End --------------------------\n"
     )
-    print(result)
+    print(
+        "\n-------------------------- Filtered Search Results Start --------------------------\n",
+        filter_inappropriate_content(result),
+        "\n-------------------------- Filtered Search Results End --------------------------\n"
+    )
