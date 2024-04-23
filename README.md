@@ -32,7 +32,7 @@
 ## Run
 
 **1. Import the package:**
-   ```bash
+   ```python
    from scraper_summarizer_tool.tools import run_tool_manager
    ```
 **2. Select the Tools:**
@@ -43,6 +43,10 @@
 - 'Full Archive Tweets': GetFullArchiveTweetsTool()
 
 **3. Run Tool Manager:**
-   ```bash
-   run_tool_manager("Architecture Styles in Software Development", ["Web Search", "Recent Tweets"])
+   ```python   
+   from scraper_summarizer_tool.tools import run_tool_manager
+   run_tool_manager(prompt="Architecture Styles in Software Development", filter_profanity=True, tools=["Web Search", "Recent Tweets"])
+
+   # To automatically select "tools" based on Prompt
+   run_tool_manager(prompt="Donald Trump", filter_profanity=True)
    ```

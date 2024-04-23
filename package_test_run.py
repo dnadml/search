@@ -6,7 +6,5 @@ if __name__ == "__main__":
     # 'Youtube Search': YoutubeSearchTool()
     # 'Recent Tweets': GetRecentTweetsTool()
     # 'Full Archive Tweets': GetFullArchiveTweetsTool()
-    result = run_tool_manager("Donald Trump",[
-        "Recent Tweets"
-    ])
+    result = run_tool_manager(prompt="Donald Trump", filter_profanity=True, tools=["Recent Tweets"])
     print(result)

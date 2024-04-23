@@ -369,7 +369,7 @@ async def set_tool_manager(prompt, tools):
     return tool_manager, result
 
 
-def run_tool_manager(prompt, tools, filter_profanity=True):
+def run_tool_manager(prompt, tools=None, filter_profanity=True):
     tool_manager, result = asyncio.run(set_tool_manager(prompt, tools))
     if filter_profanity:
         result = filter_inappropriate_content(result)
